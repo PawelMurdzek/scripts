@@ -1,0 +1,1 @@
+tshark -r capture.pcap -T json > packets.json

@@ -1,0 +1,1 @@
+tshark -r capture.pcap -T ek -e ip.src -e ip.dst -e tcp.port > specific_fields.json
