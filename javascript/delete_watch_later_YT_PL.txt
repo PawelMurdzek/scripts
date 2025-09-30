@@ -1,0 +1,41 @@
+/**
+ * How it works:
+ * 1. It finds the menu button for the *first* video in the list.
+ * 2. It clicks the button and waits a moment for the menu to appear.
+ * 3. It finds and clicks the "Remove from..." option.
+ * 4. After a delay, it calls itself to process the next video.
+ * 5. It stops automatically when no more videos are found.
+ */
+(async function processPlaylist() {
+    // A helper function to introduce a delay, making the script more reliable.
+    const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+    console.log("Starting playlist cleanup...");
+
+    async function removeNextItem() {
+        // This avoids the fragile `[2]` index.
+        const menuButton = document.querySelector('ytd-playlist-video-renderer #button.ytd-menu-renderer');
+
+        if (!menuButton) {
+            console.log( All done! No more items to remove.");
+            return;
+        }
+
+        menuButton.click();
+        await sleep(150); //150ms
+        const menuItems = document.querySelectorAll('ytd-menu-service-item-renderer yt-formatted-string');
+        const removeItem = Array.from(menuItems).find(item => item.textContent.includes("Usuń z"));
+
+        if (removeItem) {
+            removeItem.click();
+            console.log("Item removal initiated...");
+            setTimeout(removeNextItem, 600);
+        } else {
+            console.error("Could not find the 'Remove from' option. Stopping script to prevent errors.");
+            // Attempt to close the opened menu by clicking elsewhere
+            document.body.click(); 
+        }
+    }
+
+    await removeNextItem();
+})();
