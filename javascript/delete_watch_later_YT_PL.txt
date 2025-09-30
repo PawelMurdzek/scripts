@@ -17,19 +17,19 @@
         const menuButton = document.querySelector('ytd-playlist-video-renderer #button.ytd-menu-renderer');
 
         if (!menuButton) {
-            console.log( All done! No more items to remove.");
-            return;
+            console.log("All done! No more items to remove.");
+            return; 
         }
 
         menuButton.click();
-        await sleep(150); //150ms
+        await sleep(10); //10ms
         const menuItems = document.querySelectorAll('ytd-menu-service-item-renderer yt-formatted-string');
         const removeItem = Array.from(menuItems).find(item => item.textContent.includes("Usuń z"));
 
         if (removeItem) {
             removeItem.click();
             console.log("Item removal initiated...");
-            setTimeout(removeNextItem, 600);
+            setTimeout(removeNextItem, 100);
         } else {
             console.error("Could not find the 'Remove from' option. Stopping script to prevent errors.");
             // Attempt to close the opened menu by clicking elsewhere
