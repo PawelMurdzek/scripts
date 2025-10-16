@@ -1,4 +1,5 @@
 import base64
+import binascii
 
 def base64_decode(encoded_string):
     """
@@ -21,7 +22,7 @@ def base64_decode(encoded_string):
         decoded_string = decoded_bytes.decode('utf-8')
         
         return decoded_string
-    except (base64.binascii.Error, UnicodeDecodeError) as e:
+    except (binascii.Error, UnicodeDecodeError) as e:
         return f"An error occurred: {e}. Make sure the input is valid Base64."
     except Exception as e:
         return f"An unexpected error occurred: {e}"
