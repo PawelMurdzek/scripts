@@ -61,6 +61,19 @@ def generate_random_string_key(length):
     """
     return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
+def xor_with_key(input_string, key):
+    """
+    XOR each character in the input string with the given key.
+
+    Args:
+        input_string (str): The string to XOR.
+        key (int): The integer key to XOR with.
+
+    Returns:
+        str: The resulting XORed string.
+    """
+    return ''.join(chr(ord(char) ^ key) for char in input_string)
+
 def xor_hex_strings(hex1, hex2):
     """
     XOR two hexadecimal strings and return the result as a hexadecimal string.
@@ -78,21 +91,29 @@ def xor_hex_strings(hex1, hex2):
     return result.hex()
 
 def main():
+    print("=" * 50)
     print("--- XOR Encrypter ---")
-    print("1. Single-byte XOR")
+    print("=" * 50)
+    print("1. Single-byte XOR encryption")
     print("2. Repeating key XOR (string key)")
     print("3. Repeating key XOR (random key)")
+    print("4. XOR a string with a specific key")
+    print("5. XOR two hexadecimal strings")
+    print("=" * 50)
 
-    # Get the message to encrypt
-    message = input("\nEnter the message to encrypt: ")
-    message_bytes = message.encode('utf-8')
-
-    choice = input("Choose an option (1/2/3): ").strip()
+    choice = input("Choose an option (1-5): ").strip()
 
     if choice == "1":
         # Single-byte XOR
+        message = input("\nEnter the message to encrypt: ").strip()
+        if not message:
+            print("Error: Message cannot be empty.")
+            return
+            
+        message_bytes = message.encode('utf-8')
+        
         try:
-            key_input = input("Enter key (0-255 or leave empty for random): ")
+            key_input = input("Enter key (0-255 or leave empty for random): ").strip()
             if key_input == "":
                 key_byte = random.randint(1, 255)
                 print(f"Generated random key: {key_byte}")
@@ -103,14 +124,25 @@ def main():
                     return
 
             encrypted = single_byte_xor_encrypt(message_bytes, key_byte)
-            print(f"\nKey used: {key_byte} (0x{key_byte:02x})")
+            print(f"\nOriginal message: {message}")
+            print(f"Key used: {key_byte} (0x{key_byte:02x})")
             print(f"Encrypted message (hex): {binascii.hexlify(encrypted).decode()}")
+            print(f"\n{'='*50}")
+            print("IMPORTANT: Save the key for decryption!")
+            print("="*50)
         except ValueError:
             print("Error: Please enter a valid number.")
 
     elif choice == "2":
         # String key XOR
-        key_string = input("Enter the key string: ")
+        message = input("\nEnter the message to encrypt: ").strip()
+        if not message:
+            print("Error: Message cannot be empty.")
+            return
+            
+        message_bytes = message.encode('utf-8')
+        
+        key_string = input("Enter the key string: ").strip()
         if not key_string:
             print("Error: Key cannot be empty.")
             return
@@ -118,13 +150,24 @@ def main():
         key_bytes = key_string.encode('utf-8')
         encrypted = repeating_key_xor(message_bytes, key_bytes)
 
-        print(f"\nKey used: '{key_string}'")
+        print(f"\nOriginal message: {message}")
+        print(f"Key used: '{key_string}'")
         print(f"Encrypted message (hex): {binascii.hexlify(encrypted).decode()}")
+        print(f"\n{'='*50}")
+        print("IMPORTANT: Save the key for decryption!")
+        print("="*50)
 
     elif choice == "3":
         # Random key XOR
+        message = input("\nEnter the message to encrypt: ").strip()
+        if not message:
+            print("Error: Message cannot be empty.")
+            return
+            
+        message_bytes = message.encode('utf-8')
+        
         try:
-            key_length = int(input("Enter key length (1-20): "))
+            key_length = int(input("Enter key length (1-20): ").strip())
             if not (1 <= key_length <= 20):
                 print("Error: Key length must be between 1 and 20.")
                 return
@@ -133,7 +176,7 @@ def main():
             print("a. Random string (printable characters)")
             print("b. Random bytes (0-255)")
 
-            key_type = input("Enter choice (a or b): ").lower()
+            key_type = input("Enter choice (a or b): ").strip().lower()
 
             if key_type == "a":
                 key_string = generate_random_string_key(key_length)
@@ -147,28 +190,62 @@ def main():
                 return
 
             encrypted = repeating_key_xor(message_bytes, key_bytes)
-            print(f"\nEncrypted message (hex): {binascii.hexlify(encrypted).decode()}")
+            print(f"\nOriginal message: {message}")
+            print(f"Encrypted message (hex): {binascii.hexlify(encrypted).decode()}")
+            print(f"\n{'='*50}")
+            print("IMPORTANT: Save the key for decryption!")
+            print("="*50)
         except ValueError:
             print("Error: Please enter a valid number.")
 
+    elif choice == "4":
+        # XOR a string with a specific key
+        label = input("\nEnter the string to XOR: ").strip()
+        if not label:
+            print("Error: String cannot be empty.")
+            return
+            
+        try:
+            xor_key = int(input("Enter the XOR key (integer 0-255): ").strip())
+            if not 0 <= xor_key <= 255:
+                print("Error: Key must be between 0 and 255.")
+                return
+        except ValueError:
+            print("Error: Invalid key. Please provide an integer.")
+            return
+
+        result = xor_with_key(label, xor_key)
+        print(f"\nOriginal string: {label}")
+        print(f"XOR key: {xor_key}")
+        print(f"XORed string: {result}")
+        print(f"Result in hex: {result.encode('utf-8', errors='ignore').hex()}")
+
+    elif choice == "5":
+        # XOR two hexadecimal strings
+        hex1 = input("\nEnter the first hex string: ").strip()
+        hex2 = input("Enter the second hex string: ").strip()
+
+        try:
+            # Validate hex strings
+            bytes.fromhex(hex1)
+            bytes.fromhex(hex2)
+        except ValueError:
+            print("Error: Invalid hex string format.")
+            return
+
+        if len(hex1) != len(hex2):
+            print("Error: Hex strings must be of the same length.")
+            print(f"Length of first: {len(hex1)}, Length of second: {len(hex2)}")
+        else:
+            xor_result = xor_hex_strings(hex1, hex2)
+            print(f"\nXOR Result (hex): {xor_result}")
+            try:
+                print(f"XOR Result (text): {bytes.fromhex(xor_result).decode('utf-8', errors='ignore')}")
+            except:
+                pass
+
     else:
-        print("Invalid choice. Please select 1, 2, or 3.")
+        print("Invalid choice. Please select 1-5.")
 
 if __name__ == "__main__":
     main()
-
-    # Example usage of XORing two hex strings
-    print("\n--- XOR Hex Strings ---")
-    hex1 = input("Enter the first hex string: ")
-    hex2 = input("Enter the second hex string: ")
-
-    if len(hex1) != len(hex2):
-        print("Error: Hex strings must be of the same length.")
-    else:
-        xor_result = xor_hex_strings(hex1, hex2)
-        print(f"XOR Result: {xor_result}")
-
-print(f"\n{'='*60}")
-print("IMPORTANT: Save the key for decryption!")
-print("Use the hex output for decryption with the XOR decrypter.")
-print("="*60)
