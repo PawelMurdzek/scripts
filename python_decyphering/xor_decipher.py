@@ -95,7 +95,7 @@ def main():
     print("1. Decrypt with known key")
     print("2. Brute-force single-byte XOR keys")
     print("3. XOR a string with a specific key")
-    print("4. Solve XOR Challenge")
+    print("4. XOR two hexadecimal strings")
 
     choice = input("Choose an option (1/2/3/4): ").strip()
 
@@ -141,24 +141,14 @@ def main():
         print(f"XORed Label with key {xor_key}: {result}")
 
     elif choice == "4":
-        KEY1 = "a6c8b6733c9b22de7bc0253266a3867df55acde8635e19c73313"
-        KEY2_XOR_KEY1 = "37dcb292030faa90d07eec17e3b1c6d8daf94c35d4c9191a5e1e"
-        KEY2_XOR_KEY3 = "c1545756687e7573db23aa1c3452a098b71a7fbf0fddddde5fc1"
-        FLAG_XOR_KEYS = "04ee9855208a2cd59091d04767ae47963170d1660df7f56f5faf"
+        hex1 = input("Enter the first hex string: ")
+        hex2 = input("Enter the second hex string: ")
 
-        # Calculate KEY2
-        KEY2 = xor_hex_strings(KEY2_XOR_KEY1, KEY1)
-
-        # Calculate KEY3
-        KEY3 = xor_hex_strings(KEY2_XOR_KEY3, KEY2)
-
-        # Calculate FLAG
-        FLAG = xor_hex_strings(FLAG_XOR_KEYS, xor_hex_strings(KEY1, xor_hex_strings(KEY2, KEY3)))
-
-        print("KEY1:", KEY1)
-        print("KEY2:", KEY2)
-        print("KEY3:", KEY3)
-        print("FLAG:", FLAG)
+        if len(hex1) != len(hex2):
+            print("Error: Hex strings must be of the same length.")
+        else:
+            xor_result = xor_hex_strings(hex1, hex2)
+            print(f"XOR Result: {xor_result}")
 
     else:
         print("Invalid choice. Please select 1, 2, 3, or 4.")
