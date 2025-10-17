@@ -61,28 +61,70 @@ def single_byte_xor_brute_force(ciphertext_bytes):
     results.sort(key=lambda x: x[0], reverse=True)
     return results
 
-if __name__ == "__main__":
+def xor_with_key(input_string, key):
+    """
+    XOR each character in the input string with the given key.
+
+    Args:
+        input_string (str): The string to XOR.
+        key (int): The integer key to XOR with.
+
+    Returns:
+        str: The resulting XORed string.
+    """
+    return ''.join(chr(ord(char) ^ key) for char in input_string)
+
+def main():
     print("--- XOR Decrypter ---")
-    
-    try:
-        encrypted_hex = input("Enter the encrypted message (in hex format): ")
-        ciphertext = binascii.unhexlify(encrypted_hex)
-    except (binascii.Error, ValueError):
-        print("Invalid hex input. Please provide a valid hex string.")
-        exit()
-        
-    choice = input("Do you know the key? (yes/no): ").lower()
-    
-    if choice in ['y', 'yes']:
+    print("1. Decrypt with known key")
+    print("2. Brute-force single-byte XOR keys")
+    print("3. XOR a string with a specific key")
+
+    choice = input("Choose an option (1/2/3): ").strip()
+
+    if choice == "1":
+        try:
+            encrypted_hex = input("Enter the encrypted message (in hex format): ")
+            ciphertext = binascii.unhexlify(encrypted_hex)
+        except (binascii.Error, ValueError):
+            print("Invalid hex input. Please provide a valid hex string.")
+            return
+
         key_str = input("Enter the key (as a string): ")
         key = key_str.encode('utf-8')
         decrypted = repeating_key_xor(ciphertext, key)
         print(f"\nDecrypted message (in hex): {binascii.hexlify(decrypted).decode()}")
         print(f"Decrypted message (as text): {decrypted.decode('utf-8', errors='ignore')}")
-    else:
+
+    elif choice == "2":
+        try:
+            encrypted_hex = input("Enter the encrypted message (in hex format): ")
+            ciphertext = binascii.unhexlify(encrypted_hex)
+        except (binascii.Error, ValueError):
+            print("Invalid hex input. Please provide a valid hex string.")
+            return
+
         print("\n--- Brute-forcing single-byte XOR keys ---")
         brute_force_results = single_byte_xor_brute_force(ciphertext)
-        
+
         print("Top 10 possible decryptions:")
         for i, (score, key, text) in enumerate(brute_force_results[:10]):
             print(f"#{i+1}: Score={score}, Key=0x{key:02x} ('{chr(key) if 32<=key<=126 else '.'}'), Text='{text}'")
+
+    elif choice == "3":
+        label = input("Enter the string to XOR: ")
+        try:
+            xor_key = int(input("Enter the XOR key (integer): "))
+        except ValueError:
+            print("Invalid key. Please provide an integer.")
+            return
+
+        result = xor_with_key(label, xor_key)
+        print(f"\nOriginal Label: {label}")
+        print(f"XORed Label with key {xor_key}: {result}")
+
+    else:
+        print("Invalid choice. Please select 1, 2, or 3.")
+
+if __name__ == "__main__":
+    main()
