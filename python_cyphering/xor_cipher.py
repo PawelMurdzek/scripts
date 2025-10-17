@@ -61,6 +61,22 @@ def generate_random_string_key(length):
     """
     return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
+def xor_hex_strings(hex1, hex2):
+    """
+    XOR two hexadecimal strings and return the result as a hexadecimal string.
+
+    Args:
+        hex1 (str): The first hexadecimal string.
+        hex2 (str): The second hexadecimal string.
+
+    Returns:
+        str: The resulting XORed hexadecimal string.
+    """
+    bytes1 = bytes.fromhex(hex1)
+    bytes2 = bytes.fromhex(hex2)
+    result = bytes(a ^ b for a, b in zip(bytes1, bytes2))
+    return result.hex()
+
 def main():
     print("--- XOR Encrypter ---")
     print("1. Single-byte XOR")
@@ -140,6 +156,17 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+    # Example usage of XORing two hex strings
+    print("\n--- XOR Hex Strings ---")
+    hex1 = input("Enter the first hex string: ")
+    hex2 = input("Enter the second hex string: ")
+
+    if len(hex1) != len(hex2):
+        print("Error: Hex strings must be of the same length.")
+    else:
+        xor_result = xor_hex_strings(hex1, hex2)
+        print(f"XOR Result: {xor_result}")
 
 print(f"\n{'='*60}")
 print("IMPORTANT: Save the key for decryption!")

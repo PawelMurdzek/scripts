@@ -74,13 +74,30 @@ def xor_with_key(input_string, key):
     """
     return ''.join(chr(ord(char) ^ key) for char in input_string)
 
+def xor_hex_strings(hex1, hex2):
+    """
+    XOR two hexadecimal strings and return the result as a hexadecimal string.
+
+    Args:
+        hex1 (str): The first hexadecimal string.
+        hex2 (str): The second hexadecimal string.
+
+    Returns:
+        str: The resulting XORed hexadecimal string.
+    """
+    bytes1 = bytes.fromhex(hex1)
+    bytes2 = bytes.fromhex(hex2)
+    result = bytes(a ^ b for a, b in zip(bytes1, bytes2))
+    return result.hex()
+
 def main():
     print("--- XOR Decrypter ---")
     print("1. Decrypt with known key")
     print("2. Brute-force single-byte XOR keys")
     print("3. XOR a string with a specific key")
+    print("4. Solve XOR Challenge")
 
-    choice = input("Choose an option (1/2/3): ").strip()
+    choice = input("Choose an option (1/2/3/4): ").strip()
 
     if choice == "1":
         try:
@@ -123,8 +140,28 @@ def main():
         print(f"\nOriginal Label: {label}")
         print(f"XORed Label with key {xor_key}: {result}")
 
+    elif choice == "4":
+        KEY1 = "a6c8b6733c9b22de7bc0253266a3867df55acde8635e19c73313"
+        KEY2_XOR_KEY1 = "37dcb292030faa90d07eec17e3b1c6d8daf94c35d4c9191a5e1e"
+        KEY2_XOR_KEY3 = "c1545756687e7573db23aa1c3452a098b71a7fbf0fddddde5fc1"
+        FLAG_XOR_KEYS = "04ee9855208a2cd59091d04767ae47963170d1660df7f56f5faf"
+
+        # Calculate KEY2
+        KEY2 = xor_hex_strings(KEY2_XOR_KEY1, KEY1)
+
+        # Calculate KEY3
+        KEY3 = xor_hex_strings(KEY2_XOR_KEY3, KEY2)
+
+        # Calculate FLAG
+        FLAG = xor_hex_strings(FLAG_XOR_KEYS, xor_hex_strings(KEY1, xor_hex_strings(KEY2, KEY3)))
+
+        print("KEY1:", KEY1)
+        print("KEY2:", KEY2)
+        print("KEY3:", KEY3)
+        print("FLAG:", FLAG)
+
     else:
-        print("Invalid choice. Please select 1, 2, or 3.")
+        print("Invalid choice. Please select 1, 2, 3, or 4.")
 
 if __name__ == "__main__":
     main()
