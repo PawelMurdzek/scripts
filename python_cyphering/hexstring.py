@@ -1,75 +1,52 @@
 #!/usr/bin/env python3
 """
 Hexadecimal String Encryption Tool
-Converts ASCII text to hexadecimal string representation.
+
+This script provides functions to convert ASCII text to hexadecimal string representations.
 """
 
-def encrypt_to_hex_string(text):
+def text_to_hex(text):
     """
-    Encrypt text to a continuous hexadecimal string.
-    
+    Convert text to a continuous hexadecimal string.
+
     Args:
-        text (str): Text to encrypt
-    
+        text (str): Text to convert.
+
     Returns:
-        str: Hexadecimal string representation
+        str: Hexadecimal string representation.
     """
     try:
-        hex_string = ''
-        for char in text:
-            ascii_value = ord(char)
-            # Convert to hexadecimal (without 0x prefix) and ensure 2 digits
-            hex_value = format(ascii_value, '02x')
-            hex_string += hex_value
-        
-        return hex_string
-    
+        return ''.join(format(ord(char), '02x') for char in text)
     except Exception as e:
         return f"Error: {e}"
 
-def encrypt_to_hex_with_spaces(text):
+def text_to_hex_with_spaces(text):
     """
-    Encrypt text to space-separated hexadecimal values.
-    
+    Convert text to space-separated hexadecimal values.
+
     Args:
-        text (str): Text to encrypt
-    
+        text (str): Text to convert.
+
     Returns:
-        str: Space-separated hexadecimal values
+        str: Space-separated hexadecimal values.
     """
     try:
-        hex_values = []
-        for char in text:
-            ascii_value = ord(char)
-            # Convert to hexadecimal (without 0x prefix) and ensure 2 digits
-            hex_value = format(ascii_value, '02x')
-            hex_values.append(hex_value)
-        
-        return ' '.join(hex_values)
-    
+        return ' '.join(format(ord(char), '02x') for char in text)
     except Exception as e:
         return f"Error: {e}"
 
-def encrypt_to_hex_with_prefix(text):
+def text_to_hex_with_prefix(text):
     """
-    Encrypt text to space-separated hexadecimal values with 0x prefix.
-    
+    Convert text to space-separated hexadecimal values with 0x prefix.
+
     Args:
-        text (str): Text to encrypt
-    
+        text (str): Text to convert.
+
     Returns:
-        str: Space-separated hexadecimal values with 0x prefix
+        str: Space-separated hexadecimal values with 0x prefix.
     """
     try:
-        hex_values = []
-        for char in text:
-            ascii_value = ord(char)
-            # Convert to hexadecimal with 0x prefix and ensure 2 digits
-            hex_value = f"0x{format(ascii_value, '02x')}"
-            hex_values.append(hex_value)
-        
-        return ' '.join(hex_values)
-    
+        return ' '.join(f"0x{format(ord(char), '02x')}" for char in text)
     except Exception as e:
         return f"Error: {e}"
 
@@ -91,6 +68,26 @@ def validate_ascii_characters(text):
     
     return len(invalid_chars) == 0, invalid_chars
 
+def base64_to_hex(base64_string):
+    """
+    Convert a Base64 string to a hexadecimal string.
+
+    Args:
+        base64_string (str): Base64 encoded string to convert.
+
+    Returns:
+        str: Hexadecimal string representation.
+    """
+    import base64
+    try:
+        # Decode Base64 to bytes
+        byte_data = base64.b64decode(base64_string)
+        # Convert bytes to hexadecimal string
+        hex_string = byte_data.hex()
+        return hex_string
+    except Exception as e:
+        return f"Error: {e}"
+
 def main():
     print("Hexadecimal String Encryption Tool")
     print("=" * 35)
@@ -98,10 +95,10 @@ def main():
     # Example encryption
     example_text = "crypto{You_will_be_working_with_hex_strings_a_lot}"
     print(f"Example text: '{example_text}'")
-    example_result = encrypt_to_hex_string(example_text)
+    example_result = text_to_hex(example_text)
     print(f"Encrypted hex string: {example_result}")
-    print(f"Encrypted with spaces: {encrypt_to_hex_with_spaces(example_text)}")
-    print(f"Encrypted with 0x prefix: {encrypt_to_hex_with_prefix(example_text)}")
+    print(f"Encrypted with spaces: {text_to_hex_with_spaces(example_text)}")
+    print(f"Encrypted with 0x prefix: {text_to_hex_with_prefix(example_text)}")
     print()
     
     while True:
@@ -123,7 +120,7 @@ def main():
                 print(f"Warning: Non-ASCII characters found: {invalid_chars}")
                 print("Only ASCII characters (0-127) will be properly encrypted.")
             
-            result = encrypt_to_hex_string(user_input)
+            result = text_to_hex(user_input)
             print(f"Encrypted hex string: {result}")
         
         elif choice == '2':
@@ -135,7 +132,7 @@ def main():
                 print(f"Warning: Non-ASCII characters found: {invalid_chars}")
                 print("Only ASCII characters (0-127) will be properly encrypted.")
             
-            result = encrypt_to_hex_with_spaces(user_input)
+            result = text_to_hex_with_spaces(user_input)
             print(f"Encrypted hex values: {result}")
         
         elif choice == '3':
@@ -147,7 +144,7 @@ def main():
                 print(f"Warning: Non-ASCII characters found: {invalid_chars}")
                 print("Only ASCII characters (0-127) will be properly encrypted.")
             
-            result = encrypt_to_hex_with_prefix(user_input)
+            result = text_to_hex_with_prefix(user_input)
             print(f"Encrypted hex values with prefix: {result}")
         
         elif choice == '4':
