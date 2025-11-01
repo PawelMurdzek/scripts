@@ -1,127 +1,35 @@
-import re
 from math import gcd
+"""
+    c1 = (2p + 3q) ^ e1 % N
+    c2 = (5p + 7q) ^ e2 % N
+    --------------------------------------------------------------------------------------
+    N = pq => Binomial: mid elements % N == 0 
+=>  c1 = (2p) ^ e1  +  (3q) ^ e1 % N
+    c2 = (5p) ^ e2  +  (7q) ^ e2 % N
+    --------------------------------------------------------------------------------------
+    raise c1 to e2 and c2 to e1: to create similar exponent
+    c1 ^ e2 = (2p) ^ (e1e2) + (3q) ^ (e1e2) % N  (1)
+    c2 ^ e1 = (5p) ^ (e1e2) + (7q) ^ (e1e2) % N  (2)
+    -------------------------------------------------------
+    Let (1) * 5 ^ (e1e2) - (2) * 2 ^ (e1e2) to get rid of p:
+=>  t = 5 ^ (e1e2) * c1 ^ e2  - 2 ^ (e1e1) * c2 ^ e1 = ( 15 ^ (e1e2) - 14 ^ (e1e2)) * q 
+    --------------------------------------------------------------------------------------
+=>  t % q == 0 and we haved N % q == 0:
+=>  q = gcd(t, N)
+    p = N / q
+"""
 
-def extended_gcd(a, b):
-    """
-    Extended Euclidean Algorithm
-    Returns (gcd, x, y) such that a*x + b*y = gcd(a, b)
-    """
-    if b == 0:
-        return a, 1, 0
-    else:
-        g, x1, y1 = extended_gcd(b, a % b)
-        x = y1
-        y = x1 - (a // b) * y1
-        return g, x, y
+N = 14905562257842714057932724129575002825405393502650869767115942606408600343380327866258982402447992564988466588305174271674657844352454543958847568190372446723549627752274442789184236490768272313187410077124234699854724907039770193680822495470532218905083459730998003622926152590597710213127952141056029516116785229504645179830037937222022291571738973603920664929150436463632305664687903244972880062028301085749434688159905768052041207513149370212313943117665914802379158613359049957688563885391972151218676545972118494969247440489763431359679770422939441710783575668679693678435669541781490217731619224470152467768073
+e1 = 12886657667389660800780796462970504910193928992888518978200029826975978624718627799215564700096007849924866627154987365059524315097631111242449314835868137
+e2 = 12110586673991788415780355139635579057920926864887110308343229256046868242179445444897790171351302575188607117081580121488253540215781625598048021161675697
+c1 = 14010729418703228234352465883041270611113735889838753433295478495763409056136734155612156934673988344882629541204985909650433819205298939877837314145082403528055884752079219150739849992921393509593620449489882380176216648401057401569934043087087362272303101549800941212057354903559653373299153430753882035233354304783275982332995766778499425529570008008029401325668301144188970480975565215953953985078281395545902102245755862663621187438677596628109967066418993851632543137353041712721919291521767262678140115188735994447949166616101182806820741928292882642234238450207472914232596747755261325098225968268926580993051
+c2 = 14386997138637978860748278986945098648507142864584111124202580365103793165811666987664851210230009375267398957979494066880296418013345006977654742303441030008490816239306394492168516278328851513359596253775965916326353050138738183351643338294802012193721879700283088378587949921991198231956871429805847767716137817313612304833733918657887480468724409753522369325138502059408241232155633806496752350562284794715321835226991147547651155287812485862794935695241612676255374480132722940682140395725089329445356434489384831036205387293760789976615210310436732813848937666608611803196199865435145094486231635966885932646519
 
-# Dictionary to store the parsed values
-values = {}
+x1 = pow(5, e1 * e2, N) * pow(c1, e2, N)
+x2 = pow(2, e1 * e2, N) * pow(c2, e1, N)
 
-try:
-    # Read the data.txt file
-    with open('data.txt', 'r') as f:
-        content = f.read()
+# t = x1 - x2
+q = gcd(x1 - x2, N)
 
-    # Use regex to find all 'key = value' pairs
-    matches = re.findall(r'(\w+)\s*=\s*(\d+)', content)
-    
-    if not matches:
-        print("Could not find any 'key = value' pairs in data.txt.")
-        print("File content:")
-        print(content)
-    else:
-        for key, value in matches:
-            values[key] = int(value)
-        
-        print("Parsed values:")
-        print(values)
-
-        # Extract values
-        N = values.get('N')
-        e1 = values.get('e1')
-        e2 = values.get('e2')
-        c1 = values.get('c1')
-        c2 = values.get('c2')
-
-        if not all([N, e1, e2, c1, c2]):
-            print("Error: File is missing one or more required values (N, e1, e2, c1, c2).")
-        else:
-            # --- Start of the solution ---
-            
-            # Let m1 = 2*p + 3*q
-            # Let m2 = 5*p + 7*q
-            # We have: c1 = m1^e1 mod N, c2 = m2^e2 mod N
-            
-            print(f"\nAnalyzing problem:")
-            print(f"e1 bit length: {e1.bit_length()} bits")
-            print(f"e2 bit length: {e2.bit_length()} bits")
-            print(f"N bit length:  {N.bit_length()} bits")
-            
-            # Use the Common Modulus Attack / Bezout's identity
-            # If gcd(e1, e2) = 1, we can find a and b such that:
-            # a*e1 + b*e2 = 1
-            # Then: c1^a * c2^b = (m1^e1)^a * (m2^e2)^b = m1^(a*e1) * m2^(b*e2) mod N
-            
-            g, a, b = extended_gcd(e1, e2)
-            print(f"\ngcd(e1, e2) = {g}")
-            
-            if g != 1:
-                print(f"ERROR: gcd(e1, e2) = {g}, not 1. Common modulus attack won't work directly.")
-                print("This problem may require a different approach.")
-            else:
-                print(f"a*e1 + b*e2 = 1, where a = {a}, b = {b}")
-                
-                # Now we can compute linear combinations
-                # But wait - we have TWO different messages (m1 and m2), not the same message
-                # So we can't directly use common modulus attack
-                
-                # Instead, let's use the fact that m1 and m2 are linear combinations:
-                # m1 = 2*p + 3*q
-                # m2 = 5*p + 7*q
-                
-                # We can create linear combinations of c1 and c2 to get information about p and q
-                # Let's compute: 7*m1 - 3*m2 = 7*(2p+3q) - 3*(5p+7q) = 14p + 21q - 15p - 21q = -p
-                # And: 5*m1 - 2*m2 = 5*(2p+3q) - 2*(5p+7q) = 10p + 15q - 10p - 14q = q
-                
-                # So we need: (7*m1 - 3*m2) = -p and (5*m1 - 2*m2) = q
-                # In terms of ciphertexts, we need to compute:
-                # m1^7 * m2^(-3) mod N and m1^5 * m2^(-2) mod N
-                
-                # But we have c1 = m1^e1 and c2 = m2^e2
-                # We need to "extract" m1 and m2 from these exponentiations
-                
-                # Actually, let me try a different approach using resultants or lattices
-                # For now, let's try if the messages are small enough for Coppersmith
-                
-                print("\nThis problem requires advanced techniques (Coppersmith, lattices, or resultants).")
-                print("The messages are likely related by known linear combinations,")
-                print("and we need to exploit the structure more cleverly.")
-                
-                # Let me try a simpler check: are the exponents e1, e2 related to N?
-                # Sometimes in challenges, e1 = d1 mod phi(N) where d1 is small
-                
-                # Or perhaps we can use the fact that we know the relationship between m1 and m2
-                # and try to construct a polynomial relation
-                
-                print("\nAttempting alternative: checking if exponents reveal structure...")
-                print(f"e1 mod N = {e1 % N}")
-                print(f"e2 mod N = {e2 % N}")
-                
-                # Try checking if c1 or c2 when raised to small powers reveal anything
-                # This is a heuristic approach
-                for small_e in [1, 2, 3, 5, 7, 11, 13, 17, 19, 23]:
-                    test = pow(c1, small_e, N)
-                    if test < 10**20:  # If it's small, it might be meaningful
-                        print(f"c1^{small_e} mod N = {test}")
-                    test = pow(c2, small_e, N)
-                    if test < 10**20:
-                        print(f"c2^{small_e} mod N = {test}")
-                
-                print("\n=== Unable to solve with current simple methods ===")
-                print("This challenge requires SageMath or advanced number theory libraries.")
-                print("Consider using Coppersmith's attack or lattice-based methods.")
-
-except FileNotFoundError:
-    print("Error: data.txt not found. Please place data.txt in the same directory as this script.")
-except Exception as e:
-    print(f"An error occurred: {e}")
+p = N // q
+print("crypto{"+str(p)+","+str(q)+"}")
