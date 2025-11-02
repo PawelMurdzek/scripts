@@ -1,82 +1,86 @@
 from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
+from Crypto.Util.Padding import unpad
 from hashlib import sha256
-from Crypto.Util.number import getPrime, GCD, bytes_to_long, long_to_bytes, inverse
-from random import randint
+from Crypto.Util.number import long_to_bytes, inverse, bytes_to_long
 
-p, q = (11937828783676581034379858931125102585140324472721260815335317763292864909480166621128213052274890836368799667838583870053506369497321135261063326455411669, 10791832153378244806121343863826761633315500670294598707472026045570114652554351434109171763819518428955386796330132933611585226029987715932926386870921009) 
-vka = 17861197607573836317470852743261577757836195776077597552432680683466797098136864268004416983263458709262676766001801705484121426900602917823661374128795973017338811064064830745888948129754563018445340280322240329783246149494111301043358680307248355608392861091158065734798516791241711297016115223342905290485 
-vkakb = 67935530955731337697826403917041420912730876047752226130944665541354451478806426192802758283489368571324137958316413684677085586326968083790248393217164858300920181830907564661482352964432246177520467471971937484415360862013908962078426400245560016377461618782911959221279509532432392897363961467392202999833 
-vkb = 84242221073306245965942489642958344687371787572330245825957133351424060209731036155408429906114720003856404784037914599459176211062709584691421368556348357522054915642013274919939857077147153448830954134844703998734435265539724551134463605898582917330735987902562878223751672519585453755433575071131971464633 
-c = '6fff54a0bbe33fc017dc31fd94ec0c82298d30759403e728d70b6be6622c8508044790d4e8f570fe7dfac7d8b15bd326' 
-key = '6bd39a9a6846f1acf573e5830dcd9eac29722311a0ef06392c8f3c4779bc664d' 
-
-
+# These are the values from your out.txt file
+p = 10699940648196411028170713430726559470427113689721202803392638457920771439452897032229838317321639599506283870585924807089941510579727013041135771337631951
+q = 11956676387836512151480744979869173960415735990945471431153245263360714040288733895951317727355037104240049869019766679351362643879028085294045007143623763
+vka = 12464174196712130006824128097140830662505063626119265584527449469538248489497399089901898143882439888598400388066533533687284981998304579047816690938196894991071790613647584256820864020381176607982536497416854119898887903699748913002215135285877655517844457677074095521488219905950926757695656018450299948207
+vkakb = 114778245184091677576134046724609868204771151111446457870524843414356897479473739627212552495413311985409829523700919603502616667323311977056345059189257932050632105761365449853358722065048852091755612586569454771946427631498462394616623706064561443106503673008210435922340001958432623802886222040403262923652
+vkb = 6568897840127713147382345832798645667110237168011335640630440006583923102503659273104899584827637961921428677335180620421654712000512310008036693022785945317428066257236409339677041133038317088022368203160674699948914222030034711433252914821805540365972835274052062305301998463475108156010447054013166491083
+c = 'fef29e5ff72f28160027959474fc462e2a9e0b2d84b1508f7bd0e270bc98fac942e1402aa12db6e6a36fb380e7b53323'
 n = p * q
 
-# Since v = (p * randint(1, n)) % n, some values should share a factor with n
-# Let's check which one
-g_vka = GCD(vka, n)
-g_vkakb = GCD(vkakb, n)
-g_vkb = GCD(vkb, n)
+print("Starting solver script...")
+print(f"p = {p}")
+print(f"q = {q}")
 
-print(f"GCD(vka, n) = {g_vka}")
-print(f"GCD(vkakb, n) = {g_vkakb}")
-print(f"GCD(vkb, n) = {g_vkb}")
+# 1. Find v mod q
+# From the original script, modulo q:
+#   vka = v * k_A (mod q)
+#   vkb = v * k_B (mod q)
+#   vkakb = v * k_A * k_B (mod q)
+#
+# If we multiply vka and vkb:
+#   (vka * vkb) = (v^2 * k_A * k_B) (mod q)
+#
+# Now, if we divide this by vkakb (i.e., multiply by its inverse):
+#   (vka * vkb * inverse(vkakb, q)) = (v^2 * k_A * k_B * inverse(v * k_A * k_B, q)) (mod q)
+#   This simplifies to v (mod q).
+#
+# So, v_q = (vka * vkb * inverse(vkakb, q)) % q
 
-# Find which prime is the common factor
-if g_vka > 1:
-    found_p = g_vka
-    found_q = n // g_vka
-elif g_vkakb > 1:
-    found_p = g_vkakb
-    found_q = n // g_vkakb
-elif g_vkb > 1:
-    found_p = g_vkb
-    found_q = n // g_vkb
-else:
-    print("No common factor found! This shouldn't happen.")
-    exit(1)
+try:
+    # Calculate v_q (v mod q)
+    vka_mod_q = vka % q
+    vkb_mod_q = vkb % q
+    vkakb_mod_q = vkakb % q
+    
+    inv_vkakb_mod_q = inverse(vkakb_mod_q, q)
+    
+    v_q = (vka_mod_q * vkb_mod_q * inv_vkakb_mod_q) % q
+    print(f"\nSuccessfully calculated v_q (v mod q): {v_q}")
 
-print(f"Found p = {found_p}")
-print(f"Found q = {found_q}")
+    # 2. Use Chinese Remainder Theorem (CRT) to find v
+    # We have the system:
+    #   v = 0 (mod p)
+    #   v = v_q (mod q)
+    #
+    # The solution v is given by:
+    #   v = (0 * q * inverse(q, p) + v_q * p * inverse(p, q)) % n
+    #   v = (v_q * p * inverse(p, q)) % n
+    
+    inv_p_mod_q = inverse(p, q)
+    
+    # We can use (p*q) or n as the final modulus
+    v = (v_q * p * inv_p_mod_q) % n
+    print(f"\nSuccessfully recovered v: {v}")
 
-# Work modulo q (the other prime where vka is invertible)
-# vka ≡ v * k_A (mod n)
-# vkakb ≡ vka * k_B ≡ v * k_A * k_B (mod n)
-# vkb ≡ v * k_B (mod n)
+    # 3. Derive the AES key from v
+    v_bytes = long_to_bytes(v)
+    key = sha256(v_bytes).digest()
+    print(f"\nDerived AES key (hex): {key.hex()}")
 
-# Since v ≡ 0 (mod p), all these values are ≡ 0 (mod p)
-# But modulo q, they're not zero (assuming GCD(k_A, q) = GCD(k_B, q) = 1)
+    # 4. Decrypt the ciphertext c
+    c_bytes = bytes.fromhex(c)
+    cipher = AES.new(key, AES.MODE_ECB)
+    
+    padded_flag = cipher.decrypt(c_bytes)
+    
+    # 5. Unpad and print the flag
+    try:
+        flag = unpad(padded_flag, 16)
+        print("\nDecryption successful!")
+        print("========================================")
+        print(f"FLAG: {flag.decode()}")
+        print("========================================")
+    except ValueError as e:
+        print(f"\nDecryption worked, but unpadding failed: {e}")
+        print("This might mean the key is wrong, or the padding is corrupt.")
+        print(f"Padded flag (hex): {padded_flag.hex()}")
 
-# Work modulo q:
-vka_q = vka % found_q
-vkakb_q = vkakb % found_q
-vkb_q = vkb % found_q
+except Exception as e:
+    print(f"\nAn error occurred: {e}")
+    print("This could be due to a modular inverse not existing (e.g., if vkakb_mod_q is 0).")
 
-# k_B ≡ vkakb / vka (mod q)
-k_B_q = (vkakb_q * inverse(vka_q, found_q)) % found_q
-print(f"k_B mod q = {k_B_q}")
-
-# v ≡ vkb / k_B (mod q)
-v_q = (vkb_q * inverse(k_B_q, found_q)) % found_q
-print(f"v mod q = {v_q}")
-
-# Now we know:
-# v ≡ 0 (mod p)
-# v ≡ v_q (mod q)
-# Use CRT to find v mod n
-
-# v = p * x for some x
-# p * x ≡ v_q (mod q)
-# x ≡ v_q / p (mod q)
-x = (v_q * inverse(found_p % found_q, found_q)) % found_q
-v = (found_p * x) % n
-print(f"v = {v}")
-
-key = sha256(long_to_bytes(v)).digest()
-print(f"Computed key: {key.hex()}")
-cipher = AES.new(key, AES.MODE_ECB)
-
-flag = unpad(cipher.decrypt(bytes.fromhex(c)), 16)
-print(flag.decode())
