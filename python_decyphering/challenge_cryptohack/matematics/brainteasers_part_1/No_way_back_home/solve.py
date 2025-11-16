@@ -1,0 +1,57 @@
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
+from Crypto.Util.number import inverse, long_to_bytes
+from hashlib import sha256
+
+p, q = (10699940648196411028170713430726559470427113689721202803392638457920771439452897032229838317321639599506283870585924807089941510579727013041135771337631951, 11956676387836512151480744979869173960415735990945471431153245263360714040288733895951317727355037104240049869019766679351362643879028085294045007143623763) 
+vka = 124641741967121300068241280971408306625050636261192655845274494695382484894973990899018981438824398885984003880665335336872849819983045790478166909381968949910717906136475842568208640203811766079825364974168541198988879036997489130022151352858776555178444457677074095521488219905950926757695656018450299948207 
+vkakb = 114778245184091677576134046724609868204771151111446457870524843414356897479473739627212552495413311985409829523700919603502616667323311977056345059189257932050632105761365449853358722065048852091755612586569454771946427631498462394616623706064561443106503673008210435922340001958432623802886222040403262923652 
+vkb = 6568897840127713147382345832798645667110237168011335640630440006583923102503659273104899584827637961921428677335180620421654712000512310008036693022785945317428066257236409339677041133038317088022368203160674699948914222030034711433252914821805540365972835274052062305301998463475108156010447054013166491083 
+c_hex = 'fef29e5ff72f28160027959474fc462e2a9e0b2d84b1508f7bd0e270bc98fac942e1402aa12db6e6a36fb380e7b53323' 
+c = bytes.fromhex(c_hex)
+
+# Calculate modulus n
+n = p * q
+
+# --- Divide by p to work modulo q (as v = p * x) ---
+# Check if the division is exact (i.e., vka, vkakb, vkb are multiples of p)
+if vka % p != 0 or vkakb % p != 0 or vkb % p != 0:
+    print("Error: Intermediate values are not multiples of p.")
+    exit()
+
+# xka = (vka / p) = (x * k_A) mod q
+xka = (vka // p)
+# xkakb = (vkakb / p) = (x * k_A * k_B) mod q
+xkakb = (vkakb // p)
+# xkb = (vkb / p) = (x * k_B) mod q
+xkb = (vkb // p)
+
+# --- Recover private key k_A modulo q ---
+# k_A = xkakb * inverse(xkb, q) mod q
+# xkakb / xkb = (x * k_A * k_B) / (x * k_B) = k_A mod q
+k_A = (xkakb * inverse(xkb, q)) % q
+
+# --- Recover secret value x modulo q ---
+# x = xka * inverse(k_A, q) mod q
+# xka / k_A = (x * k_A) / k_A = x mod q
+x = (xka * inverse(k_A, q)) % q
+
+# --- Calculate original secret v mod n ---
+# v = p * x mod n
+v = (p * x) % n
+
+# --- Derive the AES key and decrypt ---
+# The key is sha256(v)
+key = sha256(long_to_bytes(v)).digest()
+
+# The expected key from out.txt for verification
+# expected_key_hex = '6bd39a9a6846f1acf573e5830dcd9eac29722311a0ef06392c8f3c4779bc664d'
+# print(f"Recovered Key: {key.hex()}")
+# print(f"Expected Key:  {expected_key_hex}")
+
+# Decrypt the ciphertext c with AES-ECB
+cipher = AES.new(key, AES.MODE_ECB)
+decrypted_padded = cipher.decrypt(c)
+flag = unpad(decrypted_padded, 16)
+
+print(f"\nRecovered FLAG: {flag.decode()}")
