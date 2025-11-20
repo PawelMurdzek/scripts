@@ -1,0 +1,505 @@
+%styl klasy z Polskimi Normami oprac. Marcin Wolinski
+\documentclass[a4paper,titleauthor]{mwart}
+\usepackage{polski}
+\usepackage[utf8]{inputenc}
+\usepackage{caption}
+\usepackage{subcaption}
+\usepackage{graphicx} %pakiet do wstawiania grafiki
+\usepackage[hyphens]{url} %pakiet do wstawiania linkow
+%\usepackage[hidelinks,breaklinks]{hyperref}
+\usepackage{authblk}%pakiet do tworzenia afiliacji
+\usepackage{tabularx}%pakiet do tabel
+\usepackage[a4paper, left=2cm, right=2cm, top=3cm, bottom=3cm]{geometry}
+\usepackage{listings}
+\usepackage{placeins}%pakiet do kontroli umieszczania obiektow
+\usepackage{hyperref}%pakiet do m.in. kolorowania linkow
+\usepackage[tablegrid,owncaptions]{vhistory}
+% \usepackage[sorting=none]{biblatex}
+\usepackage{adjustbox}
+\usepackage{float}
+\usepackage{amsmath}
+\usepackage{amssymb}
+
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{svg}
+\usepackage{minted} % Do kolorowania składni kodu
+\usepackage{xcolor}
+\usepackage[T1]{fontenc}
+% \addbibresource{bib.bib} % Zakomentowane, ponieważ plik bib.bib nie jest dostępny
+\raggedbottom
+
+\title{{\Huge Cryptohack Delfie-Halmann}\\ - \\{\Large Opis przejścia (walkthrough) pokoju z wyzwaniami}\\ }
+\author{Paweł Murdzek\\310850}
+
+\affil{Politechnika Warszawska}
+\definecolor{lightblue}{rgb}{0.68, 0.85, 0.90}
+\date{\today \vspace{2pt}}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\section*{Wprowadzenie}
+Ten dokument stanowi opis przejścia (walkthrough) dla kategorii wyzwań "Delfie-Halmann" na platformie \href{https://cryptohack.org/}{Cryptohack}.
+
+\section{Starter}
+
+\subsection{Working with Fields}
+\begin{itemize}
+    \item \textbf{Kod:}
+    \begin{minted}[fontsize=\tiny]{python}
+from Crypto.Util.number import inverse
+
+p = 991  
+g = 209  
+d = inverse(g, p)
+print(d)
+    \end{minted}
+    \item \textbf{Flaga:} \texttt{569}
+    \item \textbf{Wyjaśnienie:}
+    
+    Zadanie polega na obliczeniu odwrotności modularnej liczby g = 209 modulo p = 991. 
+    Używamy funkcji \texttt{inverse()} z biblioteki PyCryptodome, która znajduje taką liczbę d, 
+    że $(g \cdot d) \bmod p = 1$. W tym przypadku wynikiem jest 569.
+\end{itemize}
+
+\subsection{Generators of Groups}
+\begin{itemize}
+    \item \textbf{Kod:}
+    \begin{minted}[fontsize=\tiny]{python}
+from sympy import primerange
+
+def is_primitive_root(g, p):
+    for q in primerange(2, p):
+        if (p - 1) % q == 0 and pow(g, (p - 1) // q, p) == 1:
+            return False
+    return True
+
+p = 28151
+
+for g in range(2, p):
+    if is_primitive_root(g, p):
+        print(g)
+        break
+    \end{minted}
+    \item \textbf{Flaga:} \texttt{7}
+    \item \textbf{Wyjaśnienie:}
+    
+    Zadanie wymaga znalezienia najmniejszego pierwiastka pierwotnego (primitive root) dla p = 28151. 
+    Pierwiastek pierwotny to generator grupy multiplikatywnej modulo p. Funkcja \texttt{is\_primitive\_root()} 
+    sprawdza, czy dla każdej liczby pierwszej q dzielącej (p-1), $g^{(p-1)/q} \bmod p \neq 1$. 
+    Najmniejszym pierwiastkiem pierwotnym dla 28151 jest liczba 7.
+\end{itemize}
+
+\subsection{Computing Public Values}
+\begin{itemize}
+    \item \textbf{Kod:}
+    \begin{minted}[fontsize=\tiny]{python}
+g =2
+p=2410312426921032588552076022197566074856950548502459942654116941958108831682612228890093858261341614673227141477904012196503648957050582631942730706805009223062734745341073406696246014589361659774041027169249453200378729434170325843778659198143763193776859869524088940195577346119843545301547043747207749969763750084308926339295559968882457872412993810129130294592999947926365264059284647209730384947211681434464714438488520940127459844288859336526896320919633919
+a=972107443837033796245864316200458246846904598488981605856765890478853088246897345487328491037710219222038930943365848626194109830309179393018216763327572120124760140018038673999837643377590434413866611132403979547150659053897355593394492586978400044375465657296027592948349589216415363722668361328689588996541370097559090335137676411595949335857341797148926151694299575970292809805314431447043469447485957669949989090202320234337890323293401862304986599884732815
+print(pow(g,a,p))
+    \end{minted}
+    \item \textbf{Flaga:} \texttt{1806857697840726523322586721820911358489420128129248078673933653533930681676181753849411715714173604352323556558783759252661061186320274214883104886050164368129191719707402291577330485499513522368289395359523901406138025022522412429238971591272160519144672389532393673832265070057319485399793101182682177465364396277424717543434017666343807276970864475830391776403957550678362368319776566025118492062196941451265638054400177248572271342548616103967411990437357924}
+    \item \textbf{Wyjaśnienie:}
+    
+    To zadanie ilustruje pierwszy krok protokołu Diffie-Hellman - obliczenie wartości publicznej. 
+    Mając generator g = 2, dużą liczbę pierwszą p oraz klucz prywatny a, obliczamy wartość publiczną jako 
+    $A = g^a \bmod p$. Funkcja \texttt{pow(g, a, p)} efektywnie oblicza potęgowanie modularne.
+\end{itemize}
+
+\subsection{Computing Shared Secrets}
+\begin{itemize}
+    \item \textbf{Kod:}
+    \begin{minted}[fontsize=\tiny]{python}
+p = 2410312426921032588552076022197566074856950548502459942654116941958108831682612228890093858261341614673227141477904012196503648957050582631942730706805009223062734745341073406696246014589361659774041027169249453200378729434170325843778659198143763193776859869524088940195577346119843545301547043747207749969763750084308926339295559968882457872412993810129130294592999947926365264059284647209730384947211681434464714438488520940127459844288859336526896320919633919
+A = 70249943217595468278554541264975482909289174351516133994495821400710625291840101960595720462672604202133493023241393916394629829526272643847352371534839862030410331485087487331809285533195024369287293217083414424096866925845838641840923193480821332056735592483730921055532222505605661664236182285229504265881752580410194731633895345823963910901731715743835775619780738974844840425579683385344491015955892106904647602049559477279345982530488299847663103078045601
+b = 12019233252903990344598522535774963020395770409445296724034378433497976840167805970589960962221948290951873387728102115996831454482299243226839490999713763440412177965861508773420532266484619126710566414914227560103715336696193210379850575047730388378348266180934946139100479831339835896583443691529372703954589071507717917136906770122077739814262298488662138085608736103418601750861698417340264213867753834679359191427098195887112064503104510489610448294420720
+print(pow(A,b,p))
+    \end{minted}
+    \item \textbf{Flaga:} \texttt{1174130740413820656533832746034841985877302086316388380165984436672307692443711310285014138545204369495478725102882673427892104539120952393788961051992901649694063179853598311473820341215879965343136351436410522850717408445802043003164658348006577408558693502220285700893404674592567626297571222027902631157072143330043118418467094237965591198440803970726604537807146703763571606861448354607502654664700390453794493176794678917352634029713320615865940720837909466}
+    \item \textbf{Wyjaśnienie:}
+    
+    Drugi krok Diffie-Hellman - obliczenie wspólnego sekretu. Mając wartość publiczną drugiej strony A 
+    i własny klucz prywatny b, obliczamy wspólny sekret jako $s = A^b \bmod p$. Obie strony 
+    (Alice z kluczem a i Bob z kluczem b) uzyskają ten sam sekret: $g^{ab} \bmod p$.
+\end{itemize}
+
+\subsection{Deriving Symmetric Keys}
+\begin{itemize}
+    \item \textbf{Kod:}
+    \begin{minted}[fontsize=\tiny]{python}
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
+import hashlib
+
+def decrypt_flag(shared_secret, iv, ciphertext):
+    sha1 = hashlib.sha1()
+    sha1.update(str(shared_secret).encode('ascii'))
+    key = sha1.digest()[:16]
+    
+    cipher = AES.new(key, AES.MODE_CBC, bytes.fromhex(iv))
+    plaintext = cipher.decrypt(bytes.fromhex(ciphertext))
+    return unpad(plaintext, 16).decode('ascii')
+
+p = 2410312426921032588552076022197566074856950548502459942654116941958108831682612228890093858261341614673227141477904012196503648957050582631942730706805009223062734745341073406696246014589361659774041027169249453200378729434170325843778659198143763193776859869524088940195577346119843545301547043747207749969763750084308926339295559968882457872412993810129130294592999947926365264059284647209730384947211681434464714438488520940127459844288859336526896320919633919
+A = 112218739139542908880564359534373424013016249772931962692237907571990334483528877513809272625610512061159061737608547288558662879685086684299624481742865016924065000555267977830144740364467977206555914781236397216033805882207640219686011643468275165718132888489024688846101943642459655423609111976363316080620471928236879737944217503462265615774774318986375878440978819238346077908864116156831874695817477772477121232820827728424890845769152726027520772901423784
+b = 197395083814907028991785772714920885908249341925650951555219049411298436217190605190824934787336279228785809783531814507661385111220639329358048196339626065676869119737979175531770768861808581110311903548567424039264485661330995221907803300824165469977099494284722831845653985392791480264712091293580274947132480402319812110462641143884577706335859190668240694680261160210609506891842793868297672619625924001403035676872189455767944077542198064499486164431451944
+
+shared_secret = pow(A, b, p)
+
+iv = '737561146ff8194f45290f5766ed6aba'
+ciphertext = '39c99bf2f0c14678d6a5416faef954b5893c316fc3c48622ba1fd6a9fe85f3dc72a29c394cf4bc8aff6a7b21cae8e12c'
+
+print(decrypt_flag(shared_secret, iv, ciphertext))
+    \end{minted}
+    \item \textbf{Flaga:} \texttt{crypto\{sh4r1ng\_s3cret5\_w1th\_fr13nd5\}}
+    \item \textbf{Wyjaśnienie:}
+    
+    Pokazuje pełny przepływ Diffie-Hellman: obliczenie wspólnego sekretu, następnie wyprowadzenie 
+    klucza symetrycznego AES za pomocą SHA-1 (pierwsze 16 bajtów). Klucz jest używany do 
+    odszyfrowania flagi metodą AES-CBC. To standardowy sposób użycia DH do ustanowienia 
+    bezpiecznego kanału komunikacji.
+\end{itemize}
+
+\section{Man In The Middle}
+
+\subsection{Parameter Injection}
+\begin{itemize}
+    \item \textbf{Kod:}
+    \begin{minted}[fontsize=\tiny]{python}
+import json
+import pwn
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+import hashlib
+
+def is_pkcs7_padded(message):
+    padding = message[-message[-1]:]
+    return all(padding[i] == len(padding) for i in range(0, len(padding)))
+
+def decrypt_flag(shared_secret: int, iv: str, ciphertext: str):
+    sha1 = hashlib.sha1()
+    sha1.update(str(shared_secret).encode('ascii'))
+    key = sha1.digest()[:16]
+    ciphertext = bytes.fromhex(ciphertext)
+    iv = bytes.fromhex(iv)
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    plaintext = cipher.decrypt(ciphertext)
+    if is_pkcs7_padded(plaintext):
+        return unpad(plaintext, 16).decode('ascii')
+    else:
+        return plaintext.decode('ascii')
+
+def main():
+    remote = pwn.remote("socket.cryptohack.org", 13371)
+    remote.recvuntil("Intercepted from Alice: ")
+    intercepted_from_alice = json.loads(remote.recvline())
+    intercepted_from_alice['p'] = "1"
+    remote.recvuntil("Send to Bob: ")
+    remote.sendline(json.dumps(intercepted_from_alice))
+    remote.recvuntil("Intercepted from Bob: ")
+    remote.sendline(remote.recvline())
+    remote.recvuntil("Intercepted from Alice: ")
+    alice_ciphertext = json.loads(remote.recvline())
+    shared_secret = 0
+    flag = decrypt_flag(shared_secret, alice_ciphertext["iv"], alice_ciphertext["encrypted_flag"])
+    pwn.log.info(flag)
+
+if __name__ == "__main__":
+    main()
+    \end{minted}
+    \item \textbf{Flaga:} \texttt{crypto\{n1c3\_0n3\_m4ll0ry!!!!!!!!\}}
+    \item \textbf{Wyjaśnienie:}
+    
+    Atak Man-in-the-Middle poprzez manipulację parametrem p. Ustawiając p = 1, zmuszamy obie 
+    strony do obliczenia wspólnego sekretu jako 0 (ponieważ każda liczba mod 1 = 0). 
+    Znając sekret (0), możemy odszyfrować komunikację. To pokazuje krytyczne znaczenie 
+    weryfikacji parametrów DH.
+\end{itemize}
+
+\subsection{Export-grade}
+\begin{itemize}
+    \item \textbf{Kod:}
+    \begin{minted}[fontsize=\tiny]{python}
+from sage.all import *
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+import json, codecs, hashlib
+
+def is_pkcs7_padded(message):
+    padding = message[-message[-1]:]
+    return all(padding[i] == len(padding) for i in range(0, len(padding)))
+
+def decrypt_flag(shared_secret: int, iv: str, ciphertext: str):
+    sha1 = hashlib.sha1()
+    sha1.update(str(shared_secret).encode('ascii'))
+    key = sha1.digest()[:16]
+    ciphertext = bytes.fromhex(ciphertext)
+    iv = bytes.fromhex(iv)
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    plaintext = cipher.decrypt(ciphertext)
+    if is_pkcs7_padded(plaintext):
+        return unpad(plaintext, 16).decode('ascii')
+    else:
+        return plaintext.decode('ascii')
+
+alice = {"p": "0xde26ab651b92a129", "g": "0x2", "A": "0x9bf1d8558e7b6768"}
+bob = {"B": "0x97e38f7cb7602367"}
+flag = {"iv": "427517171ebdc1eb2676462b29c82cab", "encrypted_flag": "a515316381f3af3b965172c99c8a717d5972f2965fb0929245ce42874c15b1b0"}
+
+R = GF(alice["p"])
+g = R(alice["g"])
+A = R(alice["A"])
+B = R(bob["B"])
+
+n = discrete_log(A, g)
+print(n)
+
+shared = B**n
+
+print(decrypt_flag(shared, flag["iv"], flag["encrypted_flag"]))
+    \end{minted}
+    \item \textbf{Flaga:} \texttt{crypto\{d0wn6r4d35\_4r3\_d4n63r0u5\}}
+    \item \textbf{Wyjaśnienie:}
+    
+    Atak na słabe parametry DH (małe p). Gdy liczba pierwsza p jest zbyt mała (64-bitowa), 
+    możemy użyć algorytmu logarytmu dyskretnego z SageMath do znalezienia klucza prywatnego a 
+    z wartości publicznej A. Następnie obliczamy wspólny sekret i odszyfrowujemy flagę. 
+    To ilustruje atak "export-grade" - wymuszenie słabych parametrów.
+\end{itemize}
+
+\subsection{Static Client}
+\begin{itemize}
+    \item \textbf{Kod:}
+    \begin{minted}[fontsize=\tiny]{python}
+from pwn import remote
+import json, hashlib
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
+
+def decrypt_flag(shared_secret, iv, ciphertext):
+    sha1 = hashlib.sha1()
+    sha1.update(str(shared_secret).encode('ascii'))
+    key = sha1.digest()[:16]
+    cipher = AES.new(key, AES.MODE_CBC, bytes.fromhex(iv))
+    plaintext = cipher.decrypt(bytes.fromhex(ciphertext))
+    return unpad(plaintext, 16).decode('ascii')
+
+r = remote('socket.cryptohack.org', 13373)
+data = json.loads(r.recvline().decode().split("Alice: ")[1])
+p_hex = data['p']
+g_hex = data['g']
+A_hex = data['A']
+r.recvline()
+data = json.loads(r.recvline().decode().split("Alice: ")[1])
+iv = data["iv"]
+encrypted = data["encrypted"]
+# Send manipulated parameters: swap g and A
+r.sendline(json.dumps({"p": p_hex, "g": A_hex, "A": g_hex}).encode())
+# Get B which is actually the shared secret
+shared_secret = int(json.loads(r.recvline().decode().split("you: ")[1])["B"], 16)
+print(decrypt_flag(shared_secret, iv, encrypted))
+    \end{minted}
+    \item \textbf{Flaga:} \texttt{crypto\{n07\_3ph3m3r4l\_3n0u6h\}}
+    \item \textbf{Wyjaśnienie:}
+    
+    Atak polegający na zamianie parametrów g i A. Gdy Bob otrzyma g = A i policzy $B = A^b$, 
+    a następnie my prześlemy mu A = g, jego wspólny sekret będzie równy $g^b = B$. 
+    Wartość B jest publiczna, więc znamy wspólny sekret bez znajomości kluczy prywatnych. 
+    To pokazuje znaczenie używania efemerycznych (jednorazowych) kluczy.
+\end{itemize}
+
+\section{Group Theory}
+
+\subsection{Additive}
+\begin{itemize}
+    \item \textbf{Kod:}
+    \begin{minted}[fontsize=\tiny]{python}
+from pwn import remote
+import json, hashlib
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
+from Crypto.Util.number import inverse
+
+def decrypt_flag(shared_secret, iv, ciphertext):
+    sha1 = hashlib.sha1()
+    sha1.update(str(shared_secret).encode('ascii'))
+    key = sha1.digest()[:16]
+    cipher = AES.new(key, AES.MODE_CBC, bytes.fromhex(iv))
+    plaintext = cipher.decrypt(bytes.fromhex(ciphertext))
+    return unpad(plaintext, 16).decode('ascii')
+
+r = remote('socket.cryptohack.org', 13380)
+data = json.loads(r.recvline().decode().split("Alice: ")[1])
+p = int(data['p'], 16)
+g = int(data['g'], 16)
+A = int(data['A'], 16)
+B = int(json.loads(r.recvline().decode().split("Bob: ")[1])['B'], 16)
+data = json.loads(r.recvline().decode().split("Alice: ")[1])
+iv = data["iv"]
+encrypted = data["encrypted"]
+# Calculate shared secret
+a = A * inverse(g, p) % p
+shared_secret = B * a % p
+print(decrypt_flag(shared_secret, iv, encrypted))
+    \end{minted}
+    \item \textbf{Flaga:} \texttt{crypto\{cycl1c\_6r0up\_und3r\_4dd1710n?\}}
+    \item \textbf{Wyjaśnienie:}
+    
+    Atak na błędną implementację DH używającą dodawania zamiast mnożenia. Gdy Alice używa 
+    $A = g \cdot a \bmod p$ (dodawanie modularne), możemy odzyskać klucz prywatny a jako 
+    $a = A \cdot g^{-1} \bmod p$. Następnie obliczamy wspólny sekret jako $s = B \cdot a \bmod p$. 
+    To pokazuje, że DH wymaga operacji multiplikatywnych, nie addytywnych.
+\end{itemize}
+
+\subsection{Static Client 2}
+\begin{itemize}
+    \item \textbf{Kod:}
+    \begin{minted}[fontsize=\tiny]{python}
+from pwn import remote
+from json import loads, dumps
+from ecc_decrypt import decrypt_flag
+
+io = remote("socket.cryptohack.org", 13378)
+A = loads(io.recvline().split(b":", 1)[1])
+B = loads(io.recvline().split(b":", 1)[1])
+cipher = loads(io.recvline().split(b":",1)[1])
+
+p = int(A["p"], 16)
+i = 2
+p2 = 1
+while p2 < p or not is_prime(p2 + 1):
+    p2 *= i
+    i += 1
+p2 += 1
+# p2 = 3**1000
+assert p2 > p
+assert is_prime(p2)
+io.sendline(dumps({"p": hex(p2), "g": "0x2", "A": A["A"]}))
+reply = loads(io.recvline().split(b":", 2)[2])
+print(reply)
+b = discrete_log(Zmod(p2)(int(reply["B"], 16)), Zmod(p2)(2))
+assert(int(Zmod(p)(2)^b) == int(B["B"], 16))
+
+print(decrypt_flag(pow(int(A["A"], 16), b, p), cipher["iv"], cipher["encrypted"]))
+cipher = loads(io.recvline().split(b":",1)[1])
+print(decrypt_flag(0, cipher["iv"], cipher["encrypted"]))
+    \end{minted}
+    \item \textbf{Flaga:} \texttt{crypto\{uns4f3\_pr1m3\_sm4ll\_oRd3r\}}
+    \item \textbf{Wyjaśnienie:}
+    
+    Zaawansowany atak łączący dwie techniki MITM. Najpierw konstruujemy nową liczbę pierwszą p2 
+    o małym rzędzie multiplikatywnym (iloczyn małych liczb pierwszych), która jest większa od 
+    oryginalnego p. Wysyłamy Bobowi zmodyfikowane parametry z tym p2. Ponieważ p2 ma mały rząd, 
+    możemy użyć algorytmu logarytmu dyskretnego w SageMath (\texttt{discrete\_log}) do znalezienia 
+    klucza prywatnego Boba b z jego publicznej wartości B. Znając b, obliczamy wspólny sekret 
+    Alice i Boba: $s = A^b \bmod p$ (używamy oryginalnego p!) i deszyfrujemy pierwszą wiadomość. 
+    
+    Następnie serwer wysyła drugą zaszyfrowaną wiadomość. W drugiej rundzie używamy ataku z 
+    Parameter Injection (wymuszając p=1 lub wykorzystując fakt, że wspólny sekret wynosi 0), 
+    co pozwala nam odszyfrować drugą flagę. Ten atak pokazuje, jak niebezpieczne jest 
+    ponowne użycie statycznego klucza klienckiego i brak weryfikacji parametrów DH.
+\end{itemize}
+
+
+\section{Misc}
+
+\subsection{Script Kiddie}
+\begin{itemize}
+    \item \textbf{Kod:}
+    \begin{minted}[fontsize=\tiny]{python}
+p = 2410312426921032588552076022197566074856950548502459942654116941958108831682612228890093858261341614673227141477904012196503648957050582631942730706805009223062734745341073406696246014589361659774041027169249453200378729434170325843778659198143763193776859869524088940195577346119843545301547043747207749969763750084308926339295559968882457872412993810129130294592999947926365264059284647209730384947211681434464714438488520940127459844288859336526896320919633919
+g = 2
+A = 539556019868756019035615487062583764545019803793635712947528463889304486869497162061335997527971977050049337464152478479265992127749780103259420400564906895897077512359628760656227084039215210033374611483959802841868892445902197049235745933150328311259162433075155095844532813412268773066318780724878693701177217733659861396010057464019948199892231790191103752209797118863201066964703008895947360077614198735382678809731252084194135812256359294228383696551949882
+B = 652888676809466256406904653886313023288609075262748718135045355786028783611182379919130347165201199876762400523413029908630805888567578414109983228590188758171259420566830374793540891937904402387134765200478072915215871011267065310188328883039327167068295517693269989835771255162641401501080811953709743259493453369152994501213224841052509818015422338794357540968552645357127943400146625902468838113443484208599332251406190345653880206706388377388164982846343351
+iv = 'c044059ae57b61821a9090fbdefc63c5'
+encrypted_flag = 'f60522a95bde87a9ff00dc2c3d99177019f625f3364188c1058183004506bf96541cf241dad1c0e92535564e537322d7'
+
+b = B ^ g  # XOR zamiast potęgowania!
+secret = A ^ b
+
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+import hashlib
+
+def is_pkcs7_padded(message):
+    padding = message[-message[-1]:]
+    return all(padding[i] == len(padding) for i in range(0, len(padding)))
+
+def decrypt_flag(shared_secret: int, iv: str, ciphertext: str):
+    sha1 = hashlib.sha1()
+    sha1.update(str(shared_secret).encode('ascii'))
+    key = sha1.digest()[:16]
+    ciphertext = bytes.fromhex(ciphertext)
+    iv = bytes.fromhex(iv)
+    cipher = AES.new(key, AES.MODE_CBC, iv)
+    plaintext = cipher.decrypt(ciphertext)
+    if is_pkcs7_padded(plaintext):
+        return unpad(plaintext, 16).decode('ascii')
+    else:
+        return plaintext.decode('ascii')
+
+print(decrypt_flag(secret, iv, encrypted_flag))
+    \end{minted}
+    \item \textbf{Flaga:} \texttt{crypto\{b3\_c4r3ful\_w1th\_y0ur\_n0tati0n\}}
+    \item \textbf{Wyjaśnienie:}
+    
+    Atak wykorzystujący pomyłkę w notacji. Operator \texttt{\^} w Pythonie to XOR, nie potęgowanie! 
+    Błędna implementacja używa $b = B \oplus g$ i $s = A \oplus b$ zamiast operacji modularnych. 
+    XOR jest odwracalny i nie zapewnia bezpieczeństwa DH. To ostrzeżenie przed literalnym 
+    kopiowaniem pseudokodu bez zrozumienia operatorów w danym języku.
+\end{itemize}
+
+\subsection{Matrix}
+\begin{itemize}
+    \item \textbf{Kod:}
+    \begin{minted}[fontsize=\tiny]{python}
+from sage.all import Matrix, GF
+
+P = 2
+N = 50
+E = 31337
+
+def bits2bytes(bits):
+    byte_array = []
+    for i in range(0, len(bits), 8):
+        byte_array.append(int(bits[i:i + 8], 2))
+    return bytes(byte_array)
+
+def matrix2bytes(matrix):
+    bit_sequence = []
+    for col_index in range(N):
+        bit_sequence.extend([str(row[col_index]) for row in matrix])
+    return bits2bytes("".join(bit_sequence)[:272])
+
+# [macierz flag_data - skrócona dla czytelności]
+rows = [...]
+matrix = Matrix(GF(P), rows)
+
+print("Computing multiplicative order...")
+order = matrix.multiplicative_order()
+print(f"Multiplicative order: {order}")
+
+# C = M^E => M = C^(1/E % k)
+dec_exponent = pow(E, -1, order)
+print(f"Decryption exponent: {dec_exponent}")
+
+dec_matrix = matrix ** dec_exponent
+flag = matrix2bytes(dec_matrix).decode('utf-8')
+print(f"\nFlag: {flag}")
+    \end{minted}
+    \item \textbf{Flaga:} \texttt{crypto\{there\_is\_no\_spoon\_66eff188}}
+    \item \textbf{Wyjaśnienie:}
+    
+    Zaawansowany wariant DH używający macierzy zamiast liczb. Flaga jest zaszyfrowana jako 
+    $C = M^E$ w grupie macierzy nad $GF(2)$. Aby odszyfrować, obliczamy rząd multiplikatywny 
+    macierzy k, następnie wykładnik deszyfrujący jako $d = E^{-1} \bmod k$, i w końcu 
+    $M = C^d$. To pokazuje, że DH można zaimplementować w dowolnej grupie cyklicznej, 
+    nie tylko liczb modulo p.
+\end{itemize}
+
+\end{document}
