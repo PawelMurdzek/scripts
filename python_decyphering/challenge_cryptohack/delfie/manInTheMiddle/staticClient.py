@@ -1,71 +1,38 @@
-from pwn import *
+from pwn import remote
 import json
 import hashlib
 from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad, unpad
+from Crypto.Util.Padding import unpad
 
-r = remote('socket.cryptohack.org', 13373)
-
-def json_recv():
-    line = r.recvline()
-    print(f"Received: {line.decode()}")
-    return json.loads(line.decode())
-
-def json_send(hsh):
-    request = json.dumps(hsh)
-    print(f"Sending: {request}")
-    r.sendline(request.encode())
-
-# Pobieramy paramtrey p, g oraz A
-line = r.recvline().decode('utf-8')
-print(line)
-line = line.split("Alice: ")[1]
-
-json_Alice = json.loads(line)
-p_hex = json_Alice['p']
-g_hex = json_Alice['g']
-A_hex = json_Alice['A']
-
-line = r.recvline().decode('utf-8')
-print(line)
-
-# Pobieramy B
-json_Bob = json.loads(line.split("Bob: ")[1])
-B_hex = json_Bob['B']
-
-# Pobieramy wektor i flage
-line = r.recvline().decode('utf-8')
-json_Alice2 = json.loads(line.split("Alice: ")[1])
-iv = json_Alice2["iv"]
-encrypted_hex = json_Alice2["encrypted"]
-
-# Wysyłamy zmanipulowane parametry 
-json_send({"p": p_hex, "g": A_hex, "A": g_hex})
-
-# Odpowiada secret
-line = r.recvline().decode('utf-8')
-print(line)
-json_Bob2 = json.loads(line.split("you: ")[1])
-secret = int(json_Bob2["B"],16)
-
-def is_pkcs7_padded(message):
-    padding = message[-message[-1]:]
-    return all(padding[i] == len(padding) for i in range(0, len(padding)))
-
-def decrypt_flag(shared_secret: int, iv: str, ciphertext: str):
-    # Derive AES key from shared secret
+def decrypt_flag(shared_secret, iv, ciphertext):
     sha1 = hashlib.sha1()
     sha1.update(str(shared_secret).encode('ascii'))
     key = sha1.digest()[:16]
-    # Decrypt flag
-    ciphertext = bytes.fromhex(ciphertext)
-    iv = bytes.fromhex(iv)
-    cipher = AES.new(key, AES.MODE_CBC, iv)
-    plaintext = cipher.decrypt(ciphertext)
+    
+    cipher = AES.new(key, AES.MODE_CBC, bytes.fromhex(iv))
+    plaintext = cipher.decrypt(bytes.fromhex(ciphertext))
+    return unpad(plaintext, 16).decode('ascii')
 
-    if is_pkcs7_padded(plaintext):
-        return unpad(plaintext, 16).decode('ascii')
-    else:
-        return plaintext.decode('ascii')
+r = remote('socket.cryptohack.org', 13373)
 
-print(decrypt_flag(secret, iv, encrypted_hex))
+# Get DH parameters from Alice
+data = json.loads(r.recvline().decode().split("Alice: ")[1])
+p_hex = data['p']
+g_hex = data['g']
+A_hex = data['A']
+
+r.recvline()  # Bob's message
+
+# Get iv and encrypted message
+data = json.loads(r.recvline().decode().split("Alice: ")[1])
+iv = data["iv"]
+encrypted = data["encrypted"]
+
+# Send manipulated parameters: swap g and A
+# Bob will compute B = A^b mod p, and we can intercept it
+r.sendline(json.dumps({"p": p_hex, "g": A_hex, "A": g_hex}).encode())
+
+# Get B which is actually the shared secret
+shared_secret = int(json.loads(r.recvline().decode().split("you: ")[1])["B"], 16)
+
+print(decrypt_flag(shared_secret, iv, encrypted))

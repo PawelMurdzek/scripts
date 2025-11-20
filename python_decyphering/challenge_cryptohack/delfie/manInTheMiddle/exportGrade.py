@@ -1,70 +1,15 @@
-from pwn import *
-import json
+from sage.all import *
 from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
+
+import json
+import codecs
 import hashlib
-from sympy.ntheory import discrete_log
-
-r = remote('socket.cryptohack.org', 13379)
-
-def json_send(hsh):
-    request = json.dumps(hsh).encode()
-    r.sendline(request)
-
-# Lista obsługiwanych parametrów
-line = r.recvline().decode('utf-8')
-print(line)
-line = line.split("Alice: ")[1]
-json_1 = json.loads(line)
-supported = json_1["supported"]
-
-# Wybieramy i wysyłamy ostatni
-json_send({"supported":[f"{supported[-1]}"]})
-line = r.recvline().decode('utf-8')
-print(line)
-json_send({"chosen":supported[-1]})
-
-# Otrzymujemy parametry DH
-line = r.recvline().decode('utf-8')
-print(line)
-line = line.split("Alice: ")[2]
-json_2 = json.loads(line)
-p_hex = json_2["p"]
-g_hex = json_2["g"]
-A_hex = json_2["A"]
-p = int(p_hex,16)
-g = int(g_hex,16)
-A = int(A_hex,16)
-
-# Wysyłamy p, g i A do serwera
-json_send({"p":p_hex,"g":g_hex,"A":A_hex})
-line = r.recvline().decode('utf-8')
-print(line)
-
-# Dostajemy B
-line = line.split("Bob: ")[1]
-json_3 = json.loads(line)
-B = int(json_3["B"],16)
-
-# Odsyłamy B do serwera
-json_send({"B":f"{hex(B)}"})
-line = r.recvline().decode('utf-8')
-print(line)
-
-# Dostajemy wektro i flage
-line = line.split("Alice: ")[1]
-json_4 = json.loads(line)
-iv = json_4["iv"]
-flag = json_4["encrypted_flag"]
-
-# Obliczamy klucz prywatny a
-a = discrete_log(p,A,g)
-
-# Obliczamy wspólny sekret
-secret = pow(B, a, p)
 
 def is_pkcs7_padded(message):
     padding = message[-message[-1]:]
     return all(padding[i] == len(padding) for i in range(0, len(padding)))
+
 
 def decrypt_flag(shared_secret: int, iv: str, ciphertext: str):
     # Derive AES key from shared secret
@@ -82,4 +27,19 @@ def decrypt_flag(shared_secret: int, iv: str, ciphertext: str):
     else:
         return plaintext.decode('ascii')
 
-print(decrypt_flag(secret, iv, flag))
+
+alice = {"p": "0xde26ab651b92a129", "g": "0x2", "A": "0x9bf1d8558e7b6768"}
+bob = {"B": "0x97e38f7cb7602367"}
+flag = {"iv": "427517171ebdc1eb2676462b29c82cab", "encrypted_flag": "a515316381f3af3b965172c99c8a717d5972f2965fb0929245ce42874c15b1b0"}
+
+R = GF(alice["p"])
+g = R(alice["g"])
+A = R(alice["A"])
+B = R(bob["B"])
+
+n = discrete_log(A, g)
+print(n)
+
+shared = B**n
+
+print(decrypt_flag(shared, flag["iv"], flag["encrypted_flag"]))

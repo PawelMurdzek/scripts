@@ -1,55 +1,14 @@
-from pwn import *
 import json
+import pwn
+
 from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad, unpad
 import hashlib
-
-r = remote('socket.cryptohack.org', 13371)
-    
-def json_recv():
-    line = r.recvline()
-    return json.loads(line.decode())
-
-def json_send(hsh):
-    request = json.dumps(hsh).encode()
-    r.sendline(request)
-
-line = r.recvline()
-recv_json = json.loads(line.decode('utf-8')[24:])
-
-# Odbieramy od serwera p, g oraz A (klucz publiczny)
-p = recv_json['p']
-g = recv_json['g']
-A = recv_json['A']
-g = int(g,16)
-p = int(p,16)
-A = int(A,16) 
-
-# Wysyłamy do serwera wartości, ale nie poprawne dla A
-json_send({"p": f"{hex(p)}", "g": f"{hex(g)}", "A": f"{hex(p)}"})
-
-line = r.recvline()
-recv_json_Bob = json.loads(line.decode()[35:])
-
-# Odbieramy od serwera B, czyli klucz publiczny
-B = recv_json_Bob["B"]
-B = int(B,16)
-
-# Wysyłamy B jako p
-json_send({"B": f"{hex(p)}"})
-
-line = r.recvline()
-recv_json_Alice = json.loads(line.decode('utf-8')[39:])
-
-# Odbieramy wektor i flagę 
-iv = recv_json_Alice["iv"]
-flag = recv_json_Alice["encrypted_flag"]
-
-# Manipulowaliśmy A i B
-secret = 0
 
 def is_pkcs7_padded(message):
     padding = message[-message[-1]:]
     return all(padding[i] == len(padding) for i in range(0, len(padding)))
+
 
 def decrypt_flag(shared_secret: int, iv: str, ciphertext: str):
     # Derive AES key from shared secret
@@ -67,4 +26,27 @@ def decrypt_flag(shared_secret: int, iv: str, ciphertext: str):
     else:
         return plaintext.decode('ascii')
 
-print(decrypt_flag(secret, iv, flag))
+
+def main():
+    remote = pwn.remote("socket.cryptohack.org", 13371)
+
+    remote.recvuntil("Intercepted from Alice: ")
+    intercepted_from_alice = json.loads(remote.recvline())
+    intercepted_from_alice['p'] = "1"
+    remote.recvuntil("Send to Bob: ")
+    remote.sendline(json.dumps(intercepted_from_alice))
+
+    # We just forward Bobs request.
+    remote.recvuntil("Intercepted from Bob: ")
+    remote.sendline(remote.recvline())
+
+    remote.recvuntil("Intercepted from Alice: ")
+    alice_ciphertext = json.loads(remote.recvline())
+
+    shared_secret = 0
+    flag = decrypt_flag(shared_secret, alice_ciphertext["iv"], alice_ciphertext["encrypted_flag"])
+    pwn.log.info(flag)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,4 +1,25 @@
-00000001111101100001101010010001001011000110001001
+# Paste this entire script into https://sagecell.sagemath.org/
+
+from sage.all import Matrix, GF
+
+P = 2
+N = 50
+E = 31337
+
+def bits2bytes(bits):
+    byte_array = []
+    for i in range(0, len(bits), 8):
+        byte_array.append(int(bits[i:i + 8], 2))
+    return bytes(byte_array)
+
+def matrix2bytes(matrix):
+    bit_sequence = []
+    for col_index in range(N):
+        bit_sequence.extend([str(row[col_index]) for row in matrix])
+    return bits2bytes("".join(bit_sequence)[:272]) 
+
+# Embedded flag.enc data
+flag_data = """00000001111101100001101010010001001011000110001001
 10111010010100110001011011111110011000001001000001
 01011101000110110101010100100100111110110110011111
 11101100011011010001111011011000100010110001001010
@@ -47,4 +68,21 @@
 10000100101101000011011010100100011111100101101111
 00011101110001001010111001111011111110110011011001
 11111100110101111100110001011001000001111100110011
-00110010110110011001001111110110000011001111010110
+00110010110110011001001111110110000011001111010110"""
+
+rows = [list(map(int, row.strip())) for row in flag_data.strip().splitlines()]
+matrix = Matrix(GF(P), rows)
+
+print("Computing multiplicative order...")
+order = matrix.multiplicative_order()
+print(f"Multiplicative order: {order}")
+
+#C = M^E => M = C^(1/E % k)
+# Obliczam odwrotnośc macierzy E, z równania: E*x ≡ 1 %k więc x = E^-1% k, gdzie k to rząd multiplikatywny macierzy
+dec_exponent = pow(E, -1, order)
+print(f"Decryption exponent: {dec_exponent}")
+
+dec_matrix = matrix ** dec_exponent
+
+flag = matrix2bytes(dec_matrix).decode('utf-8')
+print(f"\nFlag: {flag}")
